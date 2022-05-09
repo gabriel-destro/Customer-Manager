@@ -1,9 +1,11 @@
 ﻿using System;
-using CustomerManager.API.CustomException;
-using CustomerManager.API.Services;
-using CustomerManager.Models;
+using CustomerManager.Application.CustomException;
+using CustomerManager.Domain.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using CustomerManager.Application;
+using Microsoft.Extensions.Logging;
+using CustomerManager.Application.Contratos;
 
 namespace CustomerManager.Controllers
 {
@@ -11,17 +13,19 @@ namespace CustomerManager.Controllers
     [Route("api/[controller]")]
     public class CreateController : ControllerBase
     {
-        private readonly ClientService _service;
-        public CreateController(ClientService service)
+        private readonly ILogger<CreateController> _logger;
+        private readonly IClientService _ClientService;
+        public CreateController(IClientService ClientService, ILogger<CreateController> logger)
         {
-            _service = service;
+            _ClientService = ClientService;
+            _logger = logger;
         }
 
         [HttpGet]
         public IActionResult GetAllClients()
         {
             try{
-                var clientes = _service.GetAllClients();
+                var clientes = _ClientService.GetAllClient();
 
             if (clientes == null) { 
                 return NotFound("Nenhum cliente encontrado."); 
@@ -29,7 +33,8 @@ namespace CustomerManager.Controllers
 
             return Ok(clientes);
             }
-            catch {
+            catch (Exception ex){
+                _logger.LogError(ex, "Erro ao recuperar clientes");
                 return this.StatusCode(StatusCodes.Status500InternalServerError,
                     $"Erro ao tentar recuperar clientes");
             }
@@ -39,13 +44,14 @@ namespace CustomerManager.Controllers
         public IActionResult CreateAsync(Client objClient)
         {
             try{
-                objClient = _service.CreateAsync(objClient);
+                objClient = _ClientService.AddClient(objClient);
                 return Ok(objClient);
             } catch (BusinessException ex){
                 return this.StatusCode(StatusCodes.Status500InternalServerError,
                     $"Erro ao tentar cadastrar cliente: {ex.Message}");
             }
             catch (Exception ex){
+                _logger.LogError(ex, "Erro ao cadastrar clientes");
                 return this.StatusCode(StatusCodes.Status500InternalServerError,
                     $"Erro ao tentar cadastrar cliente");
             }
